@@ -186,6 +186,32 @@ class TFRecordFileBuilder(object):
         )
         writer.write(example.SerializeToString())
 
+
+def read_and_decode(filename, std_shape=(447, 447, 1)):
+    '''根据TFRecord文件定义图片数据和标签的读取方式
+    参数：
+        filename：TFRecord文件路径
+        std_shape：TF加载图片数据后有一个reshape的过程
+    返回：tuple(img, label)
+    '''
+    filename_queue = tf.train.string_input_producer([filename])
+    reader = tf.TFRecordReader()
+    _, serialized_example = reader.read(filename_queue)   #返回文件名和文件
+    features = tf.parse_single_example(
+        serialized_example,
+        features={
+            'label': tf.FixedLenFeature([], tf.int64),
+            'img_raw' : tf.FixedLenFeature([], tf.string),
+        }
+    )
+    img = tf.decode_raw(features['img_raw'], tf.uint8)
+    img = tf.reshape(img, std_shape)
+    img = tf.cast(img, tf.float32) * (1. / 255) - 0.5
+    label = tf.cast(features['label'], tf.int32)
+    return img, label
+
+        
+        
 if __name__ == '__main__':
     ## 生成TFRecord
     # src_dir = "/home/chenyin/dataDir/dentale_data/raw-data/train"
